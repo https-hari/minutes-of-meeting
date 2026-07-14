@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meeting Intelligence Agent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+  .header { background: #1a1d2e; border-bottom: 1px solid #2d3148;
+            padding: 1rem 2rem; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+         box-shadow: 0 0 6px #22c55e; }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 57px); }
+
+  .sidebar { background: #13151f; border-right: 1px solid #2d3148; padding: 1.5rem 1rem; }
+  .sidebar h2 { font-size: 11px; font-weight: 600; color: #64748b;
+                text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+  .meeting-item { padding: 10px 12px; border-radius: 8px; cursor: pointer;
+                  margin-bottom: 4px; border: 1px solid transparent; transition: all 0.15s; }
+  .meeting-item:hover { background: #1e2235; border-color: #2d3148; }
+  .meeting-item.active { background: #1e2a4a; border-color: #3b5bdb; }
+  .meeting-item .m-title { font-size: 13px; font-weight: 500; color: #e2e8f0; }
+  .meeting-item .m-date  { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+  .main { padding: 2rem; overflow-y: auto; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem;
+          border-bottom: 1px solid #2d3148; padding-bottom: 0; }
+  .tab { padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+         color: #64748b; border: none; background: transparent;
+         border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .tab:hover { color: #e2e8f0; }
+  .tab.active { color: #fff; border-bottom-color: #3b5bdb; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 10px;
+          padding: 1.25rem; margin-bottom: 1rem; }
+  .card h3 { font-size: 14px; font-weight: 600; color: #94a3b8;
+             margin-bottom: 0.75rem; text-transform: uppercase;
+             letter-spacing: 0.05em; font-size: 11px; }
+
+  .summary-text { font-size: 14px; color: #cbd5e1; line-height: 1.7; }
+
+  .action-item { display: flex; align-items: flex-start; gap: 12px;
+                 padding: 10px 0; border-bottom: 1px solid #2d3148; }
+  .action-item:last-child { border-bottom: none; }
+  .status-badge { font-size: 10px; font-weight: 600; padding: 2px 8px;
+                  border-radius: 4px; white-space: nowrap; margin-top: 2px; }
+  .status-open        { background: #1e3a5f; color: #60a5fa; }
+  .status-in_progress { background: #3b2f1a; color: #f59e0b; }
+  .status-done        { background: #14291f; color: #22c55e; }
+
+  .action-desc { font-size: 13px; color: #e2e8f0; margin-bottom: 4px; }
+  .action-meta { font-size: 11px; color: #64748b; }
+
+  .decision-item { padding: 10px 0; border-bottom: 1px solid #2d3148; }
+  .decision-item:last-child { border-bottom: none; }
+  .decision-desc { font-size: 13px; color: #e2e8f0; }
+  .decision-ctx  { font-size: 11px; color: #64748b; margin-top: 3px; }
+
+  .query-box { display: flex; gap: 8px; margin-bottom: 1rem; }
+  .query-box input { flex: 1; background: #1a1d2e; border: 1px solid #2d3148;
+                     border-radius: 8px; padding: 10px 14px; color: #e2e8f0;
+                     font-size: 14px; outline: none; }
+  .query-box input:focus { border-color: #3b5bdb; }
+  .query-box button { background: #3b5bdb; border: none; border-radius: 8px;
+                      color: #fff; padding: 10px 20px; font-size: 14px;
+                      font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .query-box button:hover { background: #4c6ef5; }
+
+  .answer-box { background: #1a1d2e; border: 1px solid #3b5bdb; border-radius: 10px;
+                padding: 1.25rem; margin-bottom: 1rem; }
+  .answer-text { font-size: 14px; color: #e2e8f0; line-height: 1.7; }
+  .sources-label { font-size: 11px; color: #64748b; margin-top: 1rem;
+                   margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .source-chip { display: inline-block; background: #1e2235; border: 1px solid #2d3148;
+                 border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #94a3b8;
+                 margin: 2px; }
+
+  .ingest-form textarea { width: 100%; background: #1a1d2e; border: 1px solid #2d3148;
+                          border-radius: 8px; padding: 12px; color: #e2e8f0;
+                          font-size: 13px; min-height: 160px; resize: vertical;
+                          outline: none; font-family: inherit; }
+  .ingest-form textarea:focus { border-color: #3b5bdb; }
+  .ingest-form input { width: 100%; background: #1a1d2e; border: 1px solid #2d3148;
+                       border-radius: 8px; padding: 10px 14px; color: #e2e8f0;
+                       font-size: 14px; outline: none; margin-bottom: 10px; }
+  .ingest-form input:focus { border-color: #3b5bdb; }
+  .ingest-btn { background: #3b5bdb; border: none; border-radius: 8px; color: #fff;
+                padding: 10px 24px; font-size: 14px; font-weight: 500;
+                cursor: pointer; margin-top: 10px; transition: background 0.15s; }
+  .ingest-btn:hover { background: #4c6ef5; }
+
+  .empty { color: #475569; font-size: 13px; padding: 1rem 0; }
+  .loading { color: #64748b; font-size: 13px; }
+  .toast { position: fixed; bottom: 2rem; right: 2rem; background: #22c55e;
+           color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px;
+           font-weight: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="dot"></div>
+  <h1>Meeting Intelligence Agent</h1>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <h2>Meetings</h2>
+    <div id="meetings-list"><div class="loading">Loading...</div></div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('overview')">Overview</button>
+      <button class="tab" onclick="showTab('actions')">Action Items</button>
+      <button class="tab" onclick="showTab('query')">Ask AI</button>
+      <button class="tab" onclick="showTab('ingest')">Add Meeting</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview" class="panel active">
+      <div id="overview-content">
+        <div class="empty">Select a meeting from the sidebar.</div>
+      </div>
+    </div>
+
+    <!-- ACTION ITEMS -->
+    <div id="tab-actions" class="panel">
+      <div id="actions-content">
+        <div class="empty">Select a meeting to see action items.</div>
+      </div>
+    </div>
+
+    <!-- QUERY -->
+    <div id="tab-query" class="panel">
+      <div class="query-box">
+        <input id="query-input" placeholder="What did we decide about the budget?" />
+        <button onclick="askQuestion()">Ask</button>
+      </div>
+      <div id="query-result"></div>
+    </div>
+
+    <!-- INGEST -->
+    <div id="tab-ingest" class="panel">
+      <div class="card">
+        <h3>Add Meeting Transcript</h3>
+        <div class="ingest-form">
+          <input id="ingest-title" placeholder="Meeting title — e.g. Q3 Budget Review" />
+          <textarea id="ingest-transcript"
+            placeholder="Paste transcript here...&#10;&#10;Alice: Good morning everyone...&#10;Bob: Let's review the numbers..."></textarea>
+          <button class="ingest-btn" onclick="ingestTranscript()">Process Meeting</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "http://localhost:8000";
+let currentMeetingId = null;
+let meetings = [];
+
+// ── init ────────────────────────────────────────────────────────
+async function init() {
+  await loadMeetings();
+}
+
+async function loadMeetings() {
+  const res  = await fetch(`${API}/meetings`);
+  const json = await res.json();
+  meetings   = json.data;
+
+  const list = document.getElementById("meetings-list");
+  if (!meetings.length) {
+    list.innerHTML = '<div class="empty">No meetings yet.</div>';
+    return;
+  }
+
+  list.innerHTML = meetings.map(m => `
+    <div class="meeting-item" id="m-${m.id}" onclick="selectMeeting(${m.id})">
+      <div class="m-title">${m.title}</div>
+      <div class="m-date">${formatDate(m.date)}</div>
+    </div>
+  `).join("");
+
+  // auto-select first meeting
+  selectMeeting(meetings[0].id);
+}
+
+// ── select meeting ──────────────────────────────────────────────
+async function selectMeeting(id) {
+  currentMeetingId = id;
+
+  document.querySelectorAll(".meeting-item").forEach(el =>
+    el.classList.remove("active")
+  );
+  document.getElementById(`m-${id}`)?.classList.add("active");
+
+  const res  = await fetch(`${API}/meetings/${id}`);
+  const json = await res.json();
+  const m    = json.data;
+
+  renderOverview(m);
+  renderActions(m);
+}
+
+// ── overview ────────────────────────────────────────────────────
+function renderOverview(m) {
+  document.getElementById("overview-content").innerHTML = `
+    <div class="card">
+      <h3>Summary</h3>
+      <div class="summary-text">${m.summary || "No summary available."}</div>
+    </div>
+
+    <div class="card">
+      <h3>Decisions (${m.decisions.length})</h3>
+      ${m.decisions.length ? m.decisions.map(d => `
+        <div class="decision-item">
+          <div class="decision-desc">${d.description}</div>
+          ${d.context ? `<div class="decision-ctx">${d.context}</div>` : ""}
+        </div>
+      `).join("") : '<div class="empty">No decisions recorded.</div>'}
+    </div>
+
+    <div class="card">
+      <h3>Transcript</h3>
+      <div class="summary-text" style="white-space:pre-wrap;font-size:13px">
+        ${m.transcript || "No transcript available."}
+      </div>
+    </div>
+  `;
+}
+
+// ── action items ────────────────────────────────────────────────
+function renderActions(m) {
+  document.getElementById("actions-content").innerHTML = `
+    <div class="card">
+      <h3>Action Items (${m.action_items.length})</h3>
+      ${m.action_items.length ? m.action_items.map(a => `
+        <div class="action-item">
+          <span class="status-badge status-${a.status}">${a.status.replace("_"," ")}</span>
+          <div>
+            <div class="action-desc">${a.description}</div>
+            <div class="action-meta">
+              ${a.deadline ? "Due: " + a.deadline : "No deadline"}
+            </div>
+            <div style="margin-top:6px;display:flex;gap:6px">
+              ${["open","in_progress","done"].map(s => `
+                <button onclick="updateStatus(${a.id},'${s}')"
+                  style="font-size:11px;padding:2px 8px;border-radius:4px;
+                         cursor:pointer;border:1px solid #2d3148;
+                         background:${a.status===s?'#3b5bdb':'#1a1d2e'};
+                         color:${a.status===s?'#fff':'#94a3b8'}">
+                  ${s.replace("_"," ")}
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `).join("") : '<div class="empty">No action items.</div>'}
+    </div>
+  `;
+}
+
+// ── update status ───────────────────────────────────────────────
+async function updateStatus(itemId, status) {
+  await fetch(`${API}/action-items/${itemId}/status?status=${status}`, {
+    method: "PATCH"
+  });
+  showToast("Status updated");
+  selectMeeting(currentMeetingId);
+}
+
+// ── ask question ────────────────────────────────────────────────
+async function askQuestion() {
+  const q = document.getElementById("query-input").value.trim();
+  if (!q) return;
+
+  document.getElementById("query-result").innerHTML =
+    '<div class="loading">Thinking...</div>';
+
+  const res  = await fetch(`${API}/query`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      question: q,
+      meeting_id: currentMeetingId
+    })
+  });
+  const json = await res.json();
+  const d    = json.data;
+
+  document.getElementById("query-result").innerHTML = `
+    <div class="answer-box">
+      <div class="answer-text">${d.answer}</div>
+      <div class="sources-label">Sources</div>
+      ${d.sources.map(s => `
+        <span class="source-chip">
+          ${s.speaker || "Unknown"} · distance ${s.distance}
+        </span>
+      `).join("")}
+    </div>
+  `;
+}
+
+// allow Enter key to submit query
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("query-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") askQuestion();
+  });
+});
+
+// ── ingest transcript ───────────────────────────────────────────
+async function ingestTranscript() {
+  const title      = document.getElementById("ingest-title").value.trim();
+  const transcript = document.getElementById("ingest-transcript").value.trim();
+
+  if (!title || !transcript) {
+    showToast("Please fill in both fields");
+    return;
+  }
+
+  const btn = document.querySelector(".ingest-btn");
+  btn.textContent = "Processing...";
+  btn.disabled = true;
+
+  const res  = await fetch(`${API}/meetings/transcript`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({title, transcript})
+  });
+  const json = await res.json();
+
+  btn.textContent = "Process Meeting";
+  btn.disabled = false;
+
+  if (json.success) {
+    showToast(`Meeting saved — ${json.data.action_items} action items found`);
+    document.getElementById("ingest-title").value = "";
+    document.getElementById("ingest-transcript").value = "";
+    await loadMeetings();
+    selectMeeting(json.data.meeting_id);
+    showTab("overview");
+  }
+}
+
+// ── helpers ─────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById(`tab-${name}`).classList.add("active");
+  event.target.classList.add("active");
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric"
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+init();
+</script>
+</body>
+</html>
