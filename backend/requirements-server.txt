@@ -1,0 +1,14 @@
+# Server deployment: ONNX models via fastembed (no PyTorch), Groq for transcription.
+# Fits a 512 MB instance (e.g. Render free).
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+psycopg2-binary
+pgvector
+fastembed>=0.5
+groq>=0.9
+pyjwt[crypto]>=2.8
+python-multipart
+pydantic>=2
+python-dotenv
+numpy

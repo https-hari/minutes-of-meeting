@@ -6,6 +6,29 @@ answers questions with **hybrid retrieval + re-ranking**, and lets you talk to a
 that looks things up, updates task status and **remembers you across conversations**. Retrieval and
 the agent are both measured with evals.
 
+It is a complete product: a **website** with login (Next.js + Supabase Auth), a **Chrome extension**
+that takes notes in live Google Meet calls, and a **FastAPI backend** where every user only ever sees
+their own meetings.
+
+```
+Chrome extension (Google Meet captions) ─┐
+Website: upload audio / paste transcript ┼──► FastAPI (login check, per-user data) ──► Postgres + pgvector
+Website: meetings, tasks, assistant      ─┘            │
+                                                       └──► Groq: Whisper, gpt-oss (extraction, agent)
+```
+
+---
+
+## What's new in v3: a working product
+
+| | v2 | v3 |
+|---|---|---|
+| Users | One local user | **Login** (email/password or Google via Supabase); every query scoped to the signed-in user, other users' ids return 404 |
+| Interface | Single HTML dashboard | **Next.js website**: meetings, meeting detail with highlighted decisions, action items board, assistant chat with memory panel, search with sources, upload (drag-and-drop audio, paste transcript) |
+| Live meetings | None | **Chrome extension** for Google Meet: reads captions with real speaker names, visible "taking notes" badge, saves to your account and opens the meeting |
+| Transcription | Local Whisper (~1 GB) | **Groq hosted Whisper** (`whisper-large-v3-turbo`) by default; local still available |
+| Tests | 24 | **39** (auth, isolation between users, live captions, uploads) |
+
 ---
 
 ## What's new in v2
@@ -131,49 +154,86 @@ queue); the cross-encoder adds ~100-300 ms per query on CPU (fix: cache, or re-r
 
 | Method | Endpoint | Purpose |
 |---|---|---|
+All routes except `/health` need `Authorization: Bearer <Supabase access token>` and only see the
+caller's data.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | /health | Liveness check (public) |
+| GET | /me | The signed-in user |
 | POST | /meetings/transcript | Process a text transcript |
-| POST | /meetings/audio | Process an audio file (Whisper) |
+| POST | /meetings/audio | Process an audio file (form: `title`, `file`; max 25 MB) |
+| POST | /meetings/live | Captions from the extension: `{title, captions: [{speaker, text}]}` |
+| GET | /meetings | Your meetings, with open action item counts |
+| GET | /meetings/{id} | Meeting detail: summary, participants, decisions, action items, transcript |
+| DELETE | /meetings/{id} | Delete a meeting and everything derived from it |
+| GET | /action-items?status= | Your action items across meetings |
+| PATCH | /action-items/{id}/status | Update status (`open`, `in_progress`, `done`) |
 | POST | /query | RAG question; `mode`: `vector`, `keyword`, `hybrid`, `hybrid_rerank` (default) |
-| POST | /agent/chat | Ask the agent: `{message, user_id, conversation_id?}` → answer, steps, memories used |
-| GET | /agent/memories?user_id= | List what the agent remembers about a user |
-| DELETE | /agent/memories/{id}?user_id= | Forget one fact |
-| GET | /meetings | List all meetings |
-| GET | /meetings/{id} | Meeting details |
-| GET | /action-items | List action items |
-| PATCH | /action-items/{id}/status | Update action item status |
+| POST | /agent/chat | Ask the agent: `{message, conversation_id?}` → answer, steps, memories used |
+| GET | /agent/memories | What the agent remembers about you |
+| DELETE | /agent/memories/{id} | Forget one fact |
 
 ---
 
-## Running locally
+## Repository layout
 
-**Prerequisites:** PostgreSQL with pgvector 0.5+, Python 3.9+, ffmpeg (only for audio)
-
-```bash
-git clone https://github.com/https-hari/minutes-of-meeting.git
-cd minutes-of-meeting
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-
-cp .env.example .env          # add GROQ_API_KEY and DATABASE_URL
-python -m app.db.init_db      # creates tables + search indexes (also runs on server start)
-
-uvicorn main:app --reload --port 8000
-open dashboard.html           # tabs: Overview, Action Items, Agent, Search, Add Meeting
+```
+backend/            FastAPI API (Python)
+  app/              api/routes.py · auth.py · pipeline.py · retrieval.py · agent.py · memory.py · llm.py
+  app/agents/       transcription (Whisper) · extraction (LLM → JSON) · embedding
+  app/db/           models (10 tables) · connection · init_db (extension, indexes, upgrades)
+  tests/            pytest suite: real Postgres, fake models and LLM
+  eval/             retrieval + agent benchmarks and their results
+web/                Next.js website (login, meetings, tasks, assistant, search)
+extension/          Chrome extension for live Google Meet notes
+docs/DEPLOY.md      Supabase + Render + Vercel, step by step
+legacy/             the original single-file dashboard
+render.yaml         one-click backend deploy (Render Blueprint)
 ```
 
-The embedding model (~90 MB) and the re-ranker (~90 MB) download on first use; Whisper loads only when
-you upload audio.
+## Running locally
+
+**Prerequisites:** PostgreSQL with pgvector 0.5+, Python 3.10+, Node.js 20+
+
+**1. Backend**
+```bash
+git clone https://github.com/https-hari/minutes-of-meeting.git
+cd minutes-of-meeting/backend
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # GROQ_API_KEY and DATABASE_URL; AUTH_DISABLED=1 skips login locally
+uvicorn main:app --reload --port 8000
+```
+Tables, indexes and upgrades from older versions run on start (existing meetings are kept and assigned
+to the user `local`). The embedding model and re-ranker (~170 MB, ONNX) download on first use.
+
+**2. Website**
+```bash
+cd web
+cp .env.example .env.local    # leave the Supabase values empty to run without login
+npm install
+npm run dev                   # http://localhost:3000
+```
+
+**3. Chrome extension**: `chrome://extensions` → Developer mode → **Load unpacked** → `extension/`.
+Open the website's **Chrome extension** page and click **Connect**. In a Google Meet call, turn on
+captions and click **Start taking notes**.
+
+**Deploying** (Supabase + Render + Vercel, all free, no card): see [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Tests and evals
 
+From `backend/`:
 ```bash
 createdb mom_test
-TEST_DATABASE_URL=postgresql://localhost/mom_test python -m pytest -q   # 23 tests, no API calls, fake models
+TEST_DATABASE_URL=postgresql://localhost/mom_test python -m pytest -q   # 39 tests, no API calls, fake models
 
 python eval/run_retrieval_eval.py     # real models, no API calls; writes eval/results/retrieval.md
 python eval/run_agent_eval.py         # uses your Groq quota; writes eval/results/agent.md
 ```
 
 Evals run in a separate database (`<your db>_eval`), so your real meetings are never touched.
+CI runs the tests, the website build and an extension check on every push.
 
 ---

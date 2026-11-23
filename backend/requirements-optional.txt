@@ -1,0 +1,6 @@
+# Optional, heavy (~2 GB with PyTorch). Only needed for:
+#   TRANSCRIBE_PROVIDER=local   (Whisper on your machine instead of Groq)
+#   MODEL_BACKEND=torch         (sentence-transformers instead of fastembed)
+openai-whisper
+sentence-transformers
+torch

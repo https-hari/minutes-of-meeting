@@ -1,0 +1,4 @@
+# Development: everything the server needs, plus test tools.
+-r requirements-server.txt
+pytest
+httpx

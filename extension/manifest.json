@@ -1,0 +1,61 @@
+{
+  "manifest_version": 3,
+  "name": "Minutes \u2014 live meeting notes",
+  "version": "0.3.0",
+  "description": "Capture Google Meet captions and turn the meeting into action items, decisions and a searchable record.",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "http://localhost:8000/*",
+    "https://*.onrender.com/*",
+    "https://*.supabase.co/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Minutes",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://meet.google.com/*"
+      ],
+      "js": [
+        "content/meet.js"
+      ],
+      "css": [
+        "content/meet.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://*.vercel.app/*"
+      ],
+      "js": [
+        "content/bridge.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}
