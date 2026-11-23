@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Minutes</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header>
+    <img src="../icons/icon-32.png" alt="" width="20" height="20">
+    <strong>Minutes</strong>
+    <span id="who" class="muted"></span>
+  </header>
+
+  <section id="approve" hidden>
+    <p><strong>Connect to this website?</strong></p>
+    <p class="small">Website: <span id="apOrigin"></span><br>Server: <span id="apApi"></span></p>
+    <p class="small muted">Only approve if this is your Minutes website. Meetings you record will be sent to that server.</p>
+    <button id="approveBtn" class="primary">Approve</button>
+  </section>
+
+  <section id="connect" hidden>
+    <p>Connect the extension to your Minutes account so live meetings are saved there.</p>
+    <button id="connectBtn" class="primary">Connect account</button>
+  </section>
+
+  <section id="notMeet" hidden>
+    <p>Open a Google Meet call, turn on captions, then start here.</p>
+  </section>
+
+  <section id="meet" hidden>
+    <label for="title">Meeting title</label>
+    <input id="title" maxlength="200">
+    <p id="captionState" class="muted"></p>
+    <button id="startBtn" class="primary">Start taking notes</button>
+    <div id="recRow" hidden>
+      <p class="rec"><span class="dot" aria-hidden="true"></span><span id="recText"></span></p>
+      <button id="stopBtn" class="primary">Stop and save</button>
+    </div>
+    <p class="muted small">Let everyone know you're taking notes. Recording without consent isn't allowed in many places.</p>
+  </section>
+
+  <section id="pending" hidden>
+    <p class="warn" id="pendingText"></p>
+    <button id="retryBtn">Retry sending</button>
+  </section>
+
+  <p id="last" class="muted small" hidden></p>
+  <p id="message" role="status"></p>
+
+  <details>
+    <summary>Settings</summary>
+    <label for="apiUrl">API URL</label><input id="apiUrl">
+    <label for="webUrl">Website URL</label><input id="webUrl">
+    <div class="row">
+      <button id="saveSettings">Save</button>
+      <button id="localMode" title="For a backend running with AUTH_DISABLED=1">Use without login</button>
+      <button id="disconnect">Disconnect</button>
+    </div>
+  </details>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,16 +1,50 @@
+# ---- secrets: never commit ----
 .env
-venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.DS_Store
-*.egg-info/
-dist/
-build/
-.pytest_cache/
 .env.*
 !.env.example
-eval/results/*_fake.*
-eval/results/agent_details.json
+*.pem
+*.key
+
+# ---- python ----
+__pycache__/
+*.py[cod]
+venv/
+venv-*/
 .venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+backend/models_cache/
+
+# ---- local data and personal scripts ----
+data/
+/test_*.py
+backend/eval/results/*
+!backend/eval/results/retrieval.md
+!backend/eval/results/retrieval.csv
+!backend/eval/results/agent.md
+!backend/eval/results/.gitkeep
+
+# ---- web ----
+web/node_modules/
+web/.next/
+web/out/
+web/next-env.d.ts
+*.tsbuildinfo
+
+# ---- extension packaging ----
+*.crx
+*.zip
+
+# ---- editors / OS ----
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.bak
+
+# ---- local agent settings ----
+.claude/settings.local.json
