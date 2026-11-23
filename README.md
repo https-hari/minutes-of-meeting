@@ -177,20 +177,3 @@ python eval/run_agent_eval.py         # uses your Groq quota; writes eval/result
 Evals run in a separate database (`<your db>_eval`), so your real meetings are never touched.
 
 ---
-
-## Project structure
-
-```
-app/
-  agents/        transcription (Whisper), extraction (LLM → JSON), embedding (MiniLM)
-  db/            models (10 tables), connection, init_db (extension + indexes)
-  api/routes.py  REST API
-  pipeline.py    ingest + RAG query
-  retrieval.py   vector, keyword, RRF fusion, cross-encoder re-ranking
-  agent.py       tool definitions, validation, agent loop
-  memory.py      conversations, long-term facts
-  llm.py         Groq wrapper (tool calls, JSON mode, retries)
-eval/            meetings.json, questions.json, agent_cases.json, run_*_eval.py, results/
-tests/           pytest suite (real Postgres, fake models/LLM)
-dashboard.html   single-file UI
-```
