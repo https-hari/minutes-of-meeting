@@ -98,6 +98,27 @@
                 cursor: pointer; margin-top: 10px; transition: background 0.15s; }
   .ingest-btn:hover { background: #4c6ef5; }
 
+  .query-box select { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 8px;
+                      color: #e2e8f0; padding: 0 10px; font-size: 13px; }
+  .source-chip b { color: #e2e8f0; font-weight: 500; }
+
+  .chat { display: flex; flex-direction: column; gap: 12px; margin-bottom: 1rem; }
+  .bubble { max-width: 85%; padding: 10px 14px; border-radius: 10px; font-size: 14px;
+            line-height: 1.6; white-space: pre-wrap; }
+  .bubble.user { align-self: flex-end; background: #3b5bdb; color: #fff; }
+  .bubble.agent { align-self: flex-start; background: #1a1d2e; border: 1px solid #2d3148; color: #e2e8f0; }
+  .steps { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .step { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #1e2235;
+          border: 1px solid #2d3148; color: #94a3b8; font-family: ui-monospace, monospace; }
+  .step.fail { border-color: #ef4444; color: #fca5a5; }
+  .mem-line { font-size: 11px; color: #a78bfa; margin-top: 6px; }
+  .agent-bar { display: flex; justify-content: space-between; align-items: center;
+               font-size: 12px; color: #64748b; margin-bottom: 8px; }
+  .agent-bar input { background: #1a1d2e; border: 1px solid #2d3148; border-radius: 6px;
+                     color: #e2e8f0; padding: 4px 8px; width: 120px; }
+  .link-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 12px;
+              text-decoration: underline; }
+
   .empty { color: #475569; font-size: 13px; padding: 1rem 0; }
   .loading { color: #64748b; font-size: 13px; }
   .toast { position: fixed; bottom: 2rem; right: 2rem; background: #22c55e;
@@ -123,7 +144,8 @@
     <div class="tabs">
       <button class="tab active" onclick="showTab('overview')">Overview</button>
       <button class="tab" onclick="showTab('actions')">Action Items</button>
-      <button class="tab" onclick="showTab('query')">Ask AI</button>
+      <button class="tab" onclick="showTab('agent')">Agent</button>
+      <button class="tab" onclick="showTab('query')">Search</button>
       <button class="tab" onclick="showTab('ingest')">Add Meeting</button>
     </div>
 
@@ -141,10 +163,29 @@
       </div>
     </div>
 
+    <!-- AGENT -->
+    <div id="tab-agent" class="panel">
+      <div class="agent-bar">
+        <span>The agent picks tools itself: search, action items, decisions, status updates, memory.</span>
+        <span>User <input id="agent-user" value="default" /> <button class="link-btn" onclick="newChat()">New chat</button></span>
+      </div>
+      <div id="agent-chat" class="chat"><div class="empty">Try: "What does Daniel still have open?" or "I'm Bob, remember I own the launch timeline."</div></div>
+      <div class="query-box">
+        <input id="agent-input" placeholder="Ask about your meetings…" />
+        <button onclick="askAgent()">Send</button>
+      </div>
+    </div>
+
     <!-- QUERY -->
     <div id="tab-query" class="panel">
       <div class="query-box">
         <input id="query-input" placeholder="What did we decide about the budget?" />
+        <select id="query-mode" title="How chunks are retrieved">
+          <option value="hybrid_rerank">Hybrid + re-rank</option>
+          <option value="hybrid">Hybrid</option>
+          <option value="vector">Vector only</option>
+          <option value="keyword">Keyword only</option>
+        </select>
         <button onclick="askQuestion()">Ask</button>
       </div>
       <div id="query-result"></div>
@@ -296,7 +337,8 @@ async function askQuestion() {
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
       question: q,
-      meeting_id: currentMeetingId
+      meeting_id: currentMeetingId,
+      mode: document.getElementById("query-mode").value
     })
   });
   const json = await res.json();
@@ -304,23 +346,76 @@ async function askQuestion() {
 
   document.getElementById("query-result").innerHTML = `
     <div class="answer-box">
-      <div class="answer-text">${d.answer}</div>
+      <div class="answer-text">${esc(d.answer)}</div>
       <div class="sources-label">Sources</div>
       ${d.sources.map(s => `
-        <span class="source-chip">
-          ${s.speaker || "Unknown"} · distance ${s.distance}
+        <span class="source-chip" title="${esc(s.text)}">
+          <b>${esc(s.meeting_title)}</b> · ${esc(s.speaker || "Unknown")} · score ${s.score}
+          · ${Object.keys(s.found_by).filter(k => k !== "rrf_score").join(" + ")}
         </span>
       `).join("")}
     </div>
   `;
 }
 
-// allow Enter key to submit query
+// allow Enter key to submit
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("query-input").addEventListener("keydown", e => {
     if (e.key === "Enter") askQuestion();
   });
+  document.getElementById("agent-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") askAgent();
+  });
 });
+
+function esc(t) {
+  return String(t ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+}
+
+// ── agent chat ──────────────────────────────────────────────────
+let conversationId = null;
+
+function newChat() {
+  conversationId = null;
+  document.getElementById("agent-chat").innerHTML = '<div class="empty">New conversation. Long-term memories still apply.</div>';
+}
+
+function bubble(cls, html) {
+  const chat = document.getElementById("agent-chat");
+  chat.querySelector(".empty")?.remove();
+  const div = document.createElement("div");
+  div.className = `bubble ${cls}`;
+  div.innerHTML = html;
+  chat.appendChild(div);
+  div.scrollIntoView({behavior: "smooth", block: "end"});
+  return div;
+}
+
+async function askAgent() {
+  const input = document.getElementById("agent-input");
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = "";
+  bubble("user", esc(message));
+  const pending = bubble("agent", '<span class="loading">Thinking…</span>');
+  try {
+    const res = await fetch(`${API}/agent/chat`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({message, user_id: document.getElementById("agent-user").value || "default",
+                            conversation_id: conversationId})
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.detail || res.status);
+    const d = json.data;
+    conversationId = d.conversation_id;
+    const steps = d.steps.map(s => `<span class="step ${s.ok ? "" : "fail"}" title="${esc(s.arguments)}">${esc(s.tool)} → ${esc(s.summary)}</span>`).join("");
+    const mems = d.memories_used.length ? `<div class="mem-line">Remembered: ${d.memories_used.map(esc).join(" · ")}</div>` : "";
+    pending.innerHTML = esc(d.answer) + (steps ? `<div class="steps">${steps}</div>` : "") + mems;
+  } catch (e) {
+    pending.innerHTML = `<span style="color:#fca5a5">Error: ${esc(e.message)}</span>`;
+  }
+}
 
 // ── ingest transcript ───────────────────────────────────────────
 async function ingestTranscript() {

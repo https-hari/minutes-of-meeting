@@ -1,13 +1,14 @@
-from app.agents.transcription_agent import TranscriptionAgent
 from app.agents.extraction_agent import ExtractionAgent
 from app.agents.embedding_agent import EmbeddingAgent
+from app.config import RETRIEVAL_MODE
 from app.db.connection import SessionLocal
+from app.llm import GroqLLM
+from app.retrieval import Retriever
 from app.db.models import (
     Meeting, Participant, MeetingParticipant,
     ActionItem, Decision, Chunk, QueryLog
 )
 from datetime import datetime
-import numpy as np
 
 
 class MeetingPipeline:
@@ -27,10 +28,20 @@ class MeetingPipeline:
     - Maps directly to Chain of Responsibility design pattern
     """
 
-    def __init__(self):
-        self.transcription_agent = TranscriptionAgent()
-        self.extraction_agent    = ExtractionAgent()
-        self.embedding_agent     = EmbeddingAgent()
+    def __init__(self, llm=None, embedder=None, reranker=None):
+        self.llm                 = llm or GroqLLM()
+        self.extraction_agent    = ExtractionAgent(self.llm)
+        self.embedding_agent     = embedder or EmbeddingAgent()
+        self.retriever           = Retriever(self.embedding_agent, reranker)
+        self._transcription      = None
+
+    @property
+    def transcription_agent(self):
+        # Whisper is large and only needed for audio, so load it on first use
+        if self._transcription is None:
+            from app.agents.transcription_agent import TranscriptionAgent
+            self._transcription = TranscriptionAgent()
+        return self._transcription
 
     def process_audio(self, audio_path: str, title: str) -> dict:
         """
@@ -110,7 +121,8 @@ class MeetingPipeline:
         print(f"  Done — meeting id: {result['meeting_id']}")
         return result
 
-    def _text_to_chunks(self, transcript: str) -> list:
+    @staticmethod
+    def _text_to_chunks(transcript: str) -> list:
         """
         Splits transcript by speaker turns for chunk storage.
         Detects lines starting with 'Name:' pattern.
@@ -267,128 +279,44 @@ class MeetingPipeline:
         finally:
             db.close()
 
-    def query(self, question: str, meeting_id: int = None) -> dict:
+    def query(self, question: str, meeting_id: int = None,
+              mode: str = RETRIEVAL_MODE, k: int = 5) -> dict:
         """
         Answers a natural language question using RAG.
 
-        RAG = Retrieval Augmented Generation:
-        1. Embed the question into a vector
-        2. Find the most similar chunks in PostgreSQL
-        3. Feed those chunks + question to the LLM
-        4. Return grounded answer with source references
-
-        Why RAG instead of just asking the LLM:
-        - LLM doesn't have your meeting data in its training
-        - Feeding the whole transcript is expensive and slow
-        - RAG finds only the relevant parts — cheaper + faster
-        - Answers are grounded in real data — less hallucination
+        1. Retrieve: hybrid search (pgvector + Postgres full-text), fused with
+           Reciprocal Rank Fusion, re-ranked by a cross-encoder (see retrieval.py)
+        2. Generate: the LLM answers only from those chunks, citing them
+        3. Log the question, answer and chunk ids used
         """
-        from sqlalchemy import text
-
         db = SessionLocal()
-
         try:
-            # embed the question
-            query_vector = self.embedding_agent.embed_query(question)
+            hits = self.retriever.search(db, question, k=k, mode=mode, meeting_id=meeting_id)
+            if not hits:
+                return {"question": question, "answer": "No relevant meeting content found.",
+                        "mode": mode, "sources": []}
 
-            # find similar chunks using pgvector cosine similarity
-            # <=> is pgvector's cosine distance operator
-            # we ORDER BY distance ASC to get most similar first
-            vector_str = "[" + ",".join(str(v) for v in query_vector) + "]"
-
-            if meeting_id:
-                sql = text("""
-                    SELECT id, chunk_text, speaker, meeting_id,
-                           embedding <=> CAST(:vec AS vector) AS distance
-                    FROM chunks
-                    WHERE meeting_id = :mid
-                    ORDER BY distance ASC
-                    LIMIT 5
-                """)
-                rows = db.execute(sql, {
-                    "vec": vector_str,
-                    "mid": meeting_id
-                }).fetchall()
-            else:
-                sql = text("""
-                    SELECT id, chunk_text, speaker, meeting_id,
-                           embedding <=> CAST(:vec AS vector) AS distance
-                    FROM chunks
-                    ORDER BY distance ASC
-                    LIMIT 5
-                """)
-                rows = db.execute(sql, {"vec": vector_str}).fetchall()
-
-            if not rows:
-                return {
-                    "question": question,
-                    "answer": "No relevant meeting content found.",
-                    "sources": []
-                }
-
-            # build context from retrieved chunks
-            context = "\n\n".join([
-                f"[{row.speaker or 'Unknown'}]: {row.chunk_text}"
-                for row in rows
-            ])
-
-            chunk_ids = [row.id for row in rows]
-
-            # ask LLM with context
-            from groq import Groq
-            from app.config import GROQ_API_KEY, LLM_MODEL
-            client = Groq(api_key=GROQ_API_KEY)
-
-            response = client.chat.completions.create(
-                model=LLM_MODEL,
+            context = "\n\n".join(
+                f"[{i}] ({h.meeting_title}) {h.speaker or 'Unknown'}: {h.text}"
+                for i, h in enumerate(hits, 1)
+            )
+            response = self.llm.chat(
                 messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a meeting assistant. "
-                            "Answer questions based only on the meeting "
-                            "transcript excerpts provided. "
-                            "Be concise and specific. "
-                            "If the answer is not in the excerpts, say so."
-                        )
-                    },
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Meeting transcript excerpts:\n\n{context}"
-                            f"\n\nQuestion: {question}"
-                        )
-                    }
+                    {"role": "system", "content": (
+                        "You are a meeting assistant. Answer only from the numbered transcript "
+                        "excerpts. Cite the excerpts you used like [1] or [2][3]. Be concise. "
+                        "If the answer is not in the excerpts, say so.")},
+                    {"role": "user", "content": f"Excerpts:\n\n{context}\n\nQuestion: {question}"},
                 ],
-                temperature=0.1,
-                max_tokens=500
+                temperature=0.1, max_tokens=500,
             )
+            answer = (response["content"] or "").strip()
 
-            answer = response.choices[0].message.content.strip()
-
-            # log the query
-            log = QueryLog(
-                question=question,
-                answer=answer,
-                chunk_ids_used=chunk_ids,
-                meeting_id=meeting_id
-            )
-            db.add(log)
+            db.add(QueryLog(question=question, answer=answer,
+                            chunk_ids_used=[h.chunk_id for h in hits], meeting_id=meeting_id))
             db.commit()
 
-            return {
-                "question": question,
-                "answer":   answer,
-                "sources":  [
-                    {
-                        "chunk_id": row.id,
-                        "speaker":  row.speaker,
-                        "text":     row.chunk_text[:100] + "...",
-                        "distance": round(float(row.distance), 4)
-                    }
-                    for row in rows
-                ]
-            }
-
+            return {"question": question, "answer": answer, "mode": mode,
+                    "sources": [h.as_source() for h in hits]}
         finally:
             db.close()

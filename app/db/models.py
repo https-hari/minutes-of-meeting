@@ -103,3 +103,45 @@ class QueryLog(Base):
     chunk_ids_used  = Column(ARRAY(Integer))
     meeting_id      = Column(Integer, ForeignKey("meetings.id"))
     created_at      = Column(DateTime, server_default=func.now())
+
+
+# ── agent memory (v2) ─────────────────────────────────────────────
+# Short-term memory = the conversation (messages). Long-term memory =
+# facts about a user that should survive across conversations, stored
+# with an embedding so only the relevant ones are recalled per question.
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    user_id     = Column(Text, nullable=False, index=True)
+    created_at  = Column(DateTime, server_default=func.now())
+
+    messages = relationship("Message", back_populates="conversation",
+                            order_by="Message.id", cascade="all, delete-orphan")
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
+    role            = Column(Text, nullable=False)
+    content         = Column(Text, nullable=False)
+    created_at      = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'assistant')", name="valid_role"),
+    )
+
+    conversation = relationship("Conversation", back_populates="messages")
+
+
+class Memory(Base):
+    __tablename__ = "memories"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    user_id     = Column(Text, nullable=False, index=True)
+    fact        = Column(Text, nullable=False)
+    embedding   = Column(Vector(384), nullable=False)
+    created_at  = Column(DateTime, server_default=func.now())

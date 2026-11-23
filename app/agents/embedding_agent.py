@@ -1,4 +1,3 @@
-from sentence_transformers import SentenceTransformer
 from app.config import EMBEDDING_MODEL
 
 
@@ -21,6 +20,7 @@ class EmbeddingAgent:
     """
 
     def __init__(self):
+        from sentence_transformers import SentenceTransformer   # heavy; imported only when used
         print(f"Loading embedding model: {EMBEDDING_MODEL}")
         self.model = SentenceTransformer(EMBEDDING_MODEL)
         print("Embedding model ready.")
