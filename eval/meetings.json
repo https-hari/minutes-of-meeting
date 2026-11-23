@@ -1,0 +1,98 @@
+[
+  {
+    "title": "Q3 Budget Review",
+    "transcript": [
+      "Alice: Good morning everyone. Today we finalise the Q3 budget and the launch plan.",
+      "Bob: Marketing asked for more spend. I propose we increase the marketing budget by fifteen percent for Q3.",
+      "Priya: Finance can support that if we cut the travel allowance. Travel was 40 lakh last quarter and mostly unused.",
+      "Alice: Then it is agreed. Marketing goes up fifteen percent and the travel allowance drops to 25 lakh.",
+      "Bob: The cloud bill is the other worry. AWS cost us 18 lakh in June, up from 11 lakh in April.",
+      "Priya: Most of that growth is the staging environment running all night. Nobody shuts it down.",
+      "Daniel: I can add a scheduler that turns staging off from 10 pm to 8 am. That alone should save around a third.",
+      "Alice: Please do. Daniel owns the staging shutdown scheduler, due by July 18.",
+      "Bob: On the launch, QA is behind on the payments flow. I do not think we can ship in July.",
+      "Priya: If we launch with broken refunds the support cost will eat the marketing increase.",
+      "Alice: Agreed. We move the product launch from July to August 12 so QA can finish the payments tests.",
+      "Bob: I will update the launch timeline and tell the sales team about the new date by Friday.",
+      "Priya: One more thing. The vendor contract with Brightline renews on September 1 at a higher rate.",
+      "Alice: Let us renegotiate before signing. Priya, can you get two competing quotes?",
+      "Priya: Yes, I will collect quotes from two other vendors by August 20.",
+      "Daniel: Should hiring be part of this budget? We still need a second SRE.",
+      "Alice: Hiring is frozen until Q4. We revisit the SRE role in October.",
+      "Bob: Understood. I will tell the recruiter to pause the SRE posting.",
+      "Alice: Good. To summarise: marketing up fifteen percent, launch on August 12, staging scheduler by July 18, vendor quotes by August 20."
+    ]
+  },
+  {
+    "title": "Infra Incident Retro",
+    "transcript": [
+      "Carol: This retro covers the login outage on Tuesday. Users could not sign in for 47 minutes.",
+      "Daniel: Root cause was an expired TLS certificate on the auth gateway. It is tracked as JIRA-482.",
+      "Carol: Why did monitoring not warn us before it expired?",
+      "Daniel: The certificate expiry alert only covered the public website, not internal gateways.",
+      "Bob: So the fix is to add expiry alerts for every certificate, not just the website.",
+      "Carol: Agreed. Daniel will add certificate expiry alerts for all gateways, alerting 14 days before expiry.",
+      "Daniel: I will also move certificates to automatic renewal with cert-manager so this cannot recur.",
+      "Bob: During the outage the on-call engineer was paged three times but did not have dashboard access.",
+      "Carol: That is a process gap. Every on-call engineer must have read access to the Grafana dashboards before their shift.",
+      "Bob: I will audit on-call access and fix it before next Monday.",
+      "Daniel: There was a second problem. Postgres replication lag reached 30 seconds while we restarted services.",
+      "Carol: Did that lose any data?",
+      "Daniel: No data was lost, but read replicas served stale sessions, which made the login errors look random.",
+      "Carol: Then we route session reads to the primary database until replication lag stays under one second.",
+      "Daniel: I disagree a little. That adds load to the primary. But for sessions it is fine, they are small.",
+      "Carol: Decision stands: session reads go to the primary. We review it after the pooler upgrade.",
+      "Daniel: The pooler upgrade is PgBouncer to version 1.22, planned for next sprint.",
+      "Carol: Last item. We publish a short incident report to customers by Thursday. Bob will write it.",
+      "Bob: I will draft it today and send it to Carol for review."
+    ]
+  },
+  {
+    "title": "Hiring Sync",
+    "transcript": [
+      "Priya: We have three open roles: backend engineer, data analyst and a design intern.",
+      "Alice: The SRE role is frozen until Q4, so do not count it.",
+      "Priya: For the backend engineer we interviewed six people. Two passed the system design round.",
+      "Eve: Of those two, Rahul was stronger on databases, and Meera was stronger on API design.",
+      "Alice: Our biggest gap is Postgres performance. Rahul fits that better.",
+      "Eve: Agreed. We extend an offer to Rahul for the backend engineer role.",
+      "Priya: I will send Rahul the offer letter by Wednesday and keep Meera warm for the next opening.",
+      "Eve: For the data analyst we have no strong candidates yet. The take-home test may be too long.",
+      "Alice: How long is it now?",
+      "Eve: About six hours. Most candidates drop out before submitting.",
+      "Alice: Cut it to two hours, focusing on SQL and one chart. Long tests filter for free time, not skill.",
+      "Eve: I will rewrite the data analyst take-home to a two-hour version by next week.",
+      "Priya: The design intern posting got 140 applications in three days.",
+      "Alice: That is a lot. Can we shortlist with a portfolio review first?",
+      "Priya: Yes. Eve and I will each review half the portfolios and shortlist ten by Friday.",
+      "Eve: Interns should start on June 3 so they overlap with the launch work.",
+      "Alice: Fine, but if the launch moves, the start date can stay. Interns can help with QA.",
+      "Priya: Last thing: the referral bonus is increasing from 20,000 to 35,000 rupees starting this month.",
+      "Alice: Good. Announce the new referral bonus in the all-hands."
+    ]
+  },
+  {
+    "title": "Product Roadmap Planning",
+    "transcript": [
+      "Bob: The goal today is to agree the roadmap for the next two quarters.",
+      "Eve: Customers keep asking for offline mode in the mobile app. It is the top request with 312 votes.",
+      "Daniel: Offline mode is hard. We would need local storage and conflict resolution when the phone reconnects.",
+      "Bob: How long would a first version take?",
+      "Daniel: A read-only offline mode is about six weeks. Full offline editing is more like four months.",
+      "Bob: Then we ship read-only offline mode first and decide on editing after we see usage.",
+      "Eve: The second request is dark mode, with 198 votes. It is mostly a design task.",
+      "Bob: Dark mode is cheap and visible. The design intern can own it with Eve supervising.",
+      "Daniel: We also need to pay down tech debt. The notification service still runs on Python 3.8, which is end of life.",
+      "Bob: How risky is the upgrade?",
+      "Daniel: Low risk, maybe one sprint. If we wait, we cannot get security patches.",
+      "Bob: Then the Python upgrade for the notification service goes into next sprint, before any new features.",
+      "Eve: What about the partner API that Brightline asked for?",
+      "Bob: We said no to that. They wanted custom endpoints only they would use, and we cannot maintain them.",
+      "Eve: They might push back since their contract renews in September.",
+      "Bob: Then we offer them our public API with a higher rate limit instead of custom endpoints.",
+      "Daniel: For measuring the roadmap, I suggest we track weekly active users of offline mode and crash-free sessions.",
+      "Bob: Agreed. Success for offline mode means 20 percent of mobile users try it in the first month.",
+      "Eve: I will write the offline mode spec and share it with Daniel by the end of next week."
+    ]
+  }
+]

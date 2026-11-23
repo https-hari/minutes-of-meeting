@@ -1,0 +1,159 @@
+[
+ {
+  "q": "What tasks does Daniel own?",
+  "tools": [
+   "get_action_items"
+  ],
+  "answer_has": [
+   [
+    "scheduler",
+    "staging"
+   ],
+   [
+    "certificate",
+    "alert",
+    "cert"
+   ]
+  ]
+ },
+ {
+  "q": "Which action items are still open from the Q3 budget review?",
+  "tools": [
+   "get_action_items",
+   "list_meetings"
+  ],
+  "answer_has": [
+   [
+    "launch timeline",
+    "sales"
+   ],
+   [
+    "quote",
+    "vendor"
+   ]
+  ]
+ },
+ {
+  "q": "What did we decide about the product launch date?",
+  "tools": [
+   "get_decisions",
+   "search_meetings"
+  ],
+  "answer_has": [
+   [
+    "august 12",
+    "aug 12",
+    "12 august"
+   ]
+  ]
+ },
+ {
+  "q": "What caused the login outage?",
+  "tools": [
+   "search_meetings",
+   "get_decisions"
+  ],
+  "answer_has": [
+   [
+    "certificate",
+    "tls"
+   ]
+  ]
+ },
+ {
+  "q": "Why did we pick Rahul over Meera?",
+  "tools": [
+   "search_meetings"
+  ],
+  "answer_has": [
+   [
+    "postgres",
+    "database"
+   ]
+  ]
+ },
+ {
+  "q": "What is the new referral bonus?",
+  "tools": [
+   "search_meetings",
+   "get_decisions"
+  ],
+  "answer_has": [
+   [
+    "35,000",
+    "35000",
+    "35k"
+   ]
+  ]
+ },
+ {
+  "q": "List all the meetings we have recorded.",
+  "tools": [
+   "list_meetings"
+  ],
+  "answer_has": [
+   [
+    "budget"
+   ],
+   [
+    "retro",
+    "incident"
+   ],
+   [
+    "hiring"
+   ],
+   [
+    "roadmap"
+   ]
+  ]
+ },
+ {
+  "q": "Why did we say no to Brightline's partner API?",
+  "tools": [
+   "search_meetings",
+   "get_decisions"
+  ],
+  "answer_has": [
+   [
+    "custom endpoint",
+    "only they",
+    "maintain"
+   ]
+  ]
+ },
+ {
+  "q": "Which PgBouncer version are we moving to, and when?",
+  "tools": [
+   "search_meetings"
+  ],
+  "answer_has": [
+   [
+    "1.22"
+   ]
+  ]
+ },
+ {
+  "q": "I'm Bob. Remember that I own the launch timeline and the incident report.",
+  "tools": [
+   "save_memory"
+  ],
+  "answer_has": [],
+  "user": "bob"
+ },
+ {
+  "q": "What are my open tasks?",
+  "tools": [
+   "get_action_items"
+  ],
+  "answer_has": [
+   [
+    "launch timeline",
+    "incident report",
+    "sales",
+    "recruiter",
+    "access"
+   ]
+  ],
+  "user": "bob"
+ }
+]

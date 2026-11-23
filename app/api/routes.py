@@ -1,8 +1,13 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal, Optional
+from app import memory
+from app.agent import MeetingAgent
+from app.config import RETRIEVAL_MODE
 from app.pipeline import MeetingPipeline
 from app.db.connection import SessionLocal
+from app.db.init_db import init_db
 from app.db.models import Meeting, ActionItem, Participant, Decision
 import shutil
 import os
@@ -16,7 +21,25 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-pipeline = MeetingPipeline()
+class _Services:
+    """Built on first request, so importing the app (e.g. in tests) loads no models."""
+    pipeline: MeetingPipeline = None
+    agent: MeetingAgent = None
+
+
+def services() -> _Services:
+    if _Services.pipeline is None:
+        _Services.pipeline = MeetingPipeline()
+    if _Services.agent is None:
+        p = _Services.pipeline
+        _Services.agent = MeetingAgent(p.llm, p.retriever, p.embedding_agent)
+    return _Services
+
+
+@app.on_event("startup")
+def _startup():
+    if os.getenv("SKIP_DB_INIT") != "1":
+        init_db()
 
 
 # ── request/response models ──────────────────────────────────────
@@ -27,7 +50,13 @@ class TranscriptRequest(BaseModel):
 
 class QueryRequest(BaseModel):
     question: str
-    meeting_id: int = None
+    meeting_id: Optional[int] = None
+    mode: Literal["vector", "keyword", "hybrid", "hybrid_rerank"] = RETRIEVAL_MODE
+
+class AgentRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+    user_id: str = Field("default", min_length=1, max_length=100)
+    conversation_id: Optional[int] = None
 
 
 # ── routes ───────────────────────────────────────────────────────
@@ -44,7 +73,7 @@ def ingest_transcript(req: TranscriptRequest):
     Used for testing without audio files.
     """
     try:
-        result = pipeline.process_transcript(req.transcript, req.title)
+        result = services().pipeline.process_transcript(req.transcript, req.title)
         return {"success": True, "data": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -61,7 +90,7 @@ async def ingest_audio(title: str, file: UploadFile = File(...)):
         with open(temp_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
 
-        result = pipeline.process_audio(temp_path, title)
+        result = services().pipeline.process_audio(temp_path, title)
         return {"success": True, "data": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -77,7 +106,7 @@ def query_meetings(req: QueryRequest):
     or a specific meeting.
     """
     try:
-        result = pipeline.query(req.question, req.meeting_id)
+        result = services().pipeline.query(req.question, req.meeting_id, mode=req.mode)
         return {"success": True, "data": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -209,5 +238,46 @@ def update_action_item_status(item_id: int, status: str):
         item.status = status
         db.commit()
         return {"success": True, "data": {"id": item_id, "status": status}}
+    finally:
+        db.close()
+
+
+# ── agent (v2) ───────────────────────────────────────────────────
+
+@app.post("/agent/chat")
+def agent_chat(req: AgentRequest):
+    """
+    Ask the meeting agent. It decides which tools to call (search transcripts,
+    action items, decisions, update a status, remember a fact) and returns its
+    answer plus the steps it took.
+    """
+    db = SessionLocal()
+    try:
+        result = services().agent.chat(db, req.user_id, req.message, req.conversation_id)
+        return {"success": True, "data": result}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
+@app.get("/agent/memories")
+def list_memories(user_id: str = "default"):
+    db = SessionLocal()
+    try:
+        return {"success": True, "data": memory.list_facts(db, user_id)}
+    finally:
+        db.close()
+
+
+@app.delete("/agent/memories/{memory_id}")
+def delete_memory(memory_id: int, user_id: str = "default"):
+    db = SessionLocal()
+    try:
+        if not memory.delete_fact(db, user_id, memory_id):
+            raise HTTPException(status_code=404, detail="Memory not found")
+        db.commit()
+        return {"success": True, "data": {"id": memory_id}}
     finally:
         db.close()

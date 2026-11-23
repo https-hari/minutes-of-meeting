@@ -1,18 +1,17 @@
 import json
-from groq import Groq
-from app.config import GROQ_API_KEY, LLM_MODEL
+
+from app.llm import GroqLLM
 
 
 class ExtractionAgent:
 
-    def __init__(self):
-        self.client = Groq(api_key=GROQ_API_KEY)
+    def __init__(self, llm=None):
+        self.llm = llm or GroqLLM()
 
     def extract(self, transcript: str, meeting_title: str = "") -> dict:
         prompt = self._build_prompt(transcript, meeting_title)
 
-        response = self.client.chat.completions.create(
-            model=LLM_MODEL,
+        response = self.llm.chat(
             messages=[
                 {
                     "role": "system",
@@ -29,11 +28,12 @@ class ExtractionAgent:
                     "content": prompt
                 }
             ],
+            json_mode=True,
             temperature=0.1,
             max_tokens=2000
         )
 
-        raw = response.choices[0].message.content.strip()
+        raw = (response["content"] or "").strip()
         return self._parse_response(raw)
 
     def _build_prompt(self, transcript: str, meeting_title: str) -> str:

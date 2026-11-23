@@ -1,0 +1,129 @@
+mode,type,question,rank
+vector,paraphrase,How much did marketing spending increase by?,1
+vector,direct,What happened to the travel allowance?,2
+vector,paraphrase,Why has our cloud bill gone up?,8
+vector,exact,What was the AWS bill in June?,1
+vector,paraphrase,Who is building the scheduler to turn off staging overnight?,1
+vector,direct,When is the product launch now?,6
+vector,paraphrase,Why couldn't we ship in July?,1
+vector,direct,Who will tell the sales team about the new launch date?,1
+vector,exact,What is happening with the Brightline vendor contract renewal?,1
+vector,paraphrase,Are we hiring the second SRE now?,2
+vector,paraphrase,How long were users unable to log in?,1
+vector,exact,What is JIRA-482?,1
+vector,paraphrase,Why didn't our alerts catch the expiring certificate?,3
+vector,exact,How many days before expiry will certificate alerts fire?,1
+vector,paraphrase,How will we stop certificates from expiring again?,1
+vector,direct,What access must on-call engineers have before their shift?,1
+vector,paraphrase,How bad did the database replica delay get?,1
+vector,paraphrase,Why did login errors seem random during the outage?,1
+vector,direct,Where will session reads be served from?,2
+vector,exact,Which PgBouncer version are we upgrading to?,1
+vector,direct,Who writes the customer incident report?,1
+vector,direct,Which candidate gets the backend engineer offer?,1
+vector,paraphrase,Why was Rahul preferred over Meera?,3
+vector,paraphrase,Why are data analyst candidates dropping out?,3
+vector,direct,How long will the new analyst take-home be?,
+vector,exact,How many applications did the design intern role get?,1
+vector,exact,What is the new referral bonus amount?,2
+vector,paraphrase,What is the most requested feature from customers?,6
+vector,direct,How long would full offline editing take to build?,1
+vector,paraphrase,Why must the notification service be upgraded?,2
+vector,paraphrase,Why did we refuse Brightline's partner API request?,6
+vector,direct,What counts as success for offline mode?,1
+keyword,paraphrase,How much did marketing spending increase by?,1
+keyword,direct,What happened to the travel allowance?,2
+keyword,paraphrase,Why has our cloud bill gone up?,
+keyword,exact,What was the AWS bill in June?,1
+keyword,paraphrase,Who is building the scheduler to turn off staging overnight?,1
+keyword,direct,When is the product launch now?,1
+keyword,paraphrase,Why couldn't we ship in July?,1
+keyword,direct,Who will tell the sales team about the new launch date?,1
+keyword,exact,What is happening with the Brightline vendor contract renewal?,1
+keyword,paraphrase,Are we hiring the second SRE now?,2
+keyword,paraphrase,How long were users unable to log in?,1
+keyword,exact,What is JIRA-482?,1
+keyword,paraphrase,Why didn't our alerts catch the expiring certificate?,3
+keyword,exact,How many days before expiry will certificate alerts fire?,1
+keyword,paraphrase,How will we stop certificates from expiring again?,6
+keyword,direct,What access must on-call engineers have before their shift?,1
+keyword,paraphrase,How bad did the database replica delay get?,
+keyword,paraphrase,Why did login errors seem random during the outage?,1
+keyword,direct,Where will session reads be served from?,2
+keyword,exact,Which PgBouncer version are we upgrading to?,1
+keyword,direct,Who writes the customer incident report?,1
+keyword,direct,Which candidate gets the backend engineer offer?,1
+keyword,paraphrase,Why was Rahul preferred over Meera?,3
+keyword,paraphrase,Why are data analyst candidates dropping out?,3
+keyword,direct,How long will the new analyst take-home be?,4
+keyword,exact,How many applications did the design intern role get?,2
+keyword,exact,What is the new referral bonus amount?,2
+keyword,paraphrase,What is the most requested feature from customers?,1
+keyword,direct,How long would full offline editing take to build?,1
+keyword,paraphrase,Why must the notification service be upgraded?,2
+keyword,paraphrase,Why did we refuse Brightline's partner API request?,
+keyword,direct,What counts as success for offline mode?,2
+hybrid,paraphrase,How much did marketing spending increase by?,1
+hybrid,direct,What happened to the travel allowance?,2
+hybrid,paraphrase,Why has our cloud bill gone up?,8
+hybrid,exact,What was the AWS bill in June?,1
+hybrid,paraphrase,Who is building the scheduler to turn off staging overnight?,1
+hybrid,direct,When is the product launch now?,3
+hybrid,paraphrase,Why couldn't we ship in July?,1
+hybrid,direct,Who will tell the sales team about the new launch date?,1
+hybrid,exact,What is happening with the Brightline vendor contract renewal?,1
+hybrid,paraphrase,Are we hiring the second SRE now?,2
+hybrid,paraphrase,How long were users unable to log in?,1
+hybrid,exact,What is JIRA-482?,1
+hybrid,paraphrase,Why didn't our alerts catch the expiring certificate?,3
+hybrid,exact,How many days before expiry will certificate alerts fire?,1
+hybrid,paraphrase,How will we stop certificates from expiring again?,2
+hybrid,direct,What access must on-call engineers have before their shift?,1
+hybrid,paraphrase,How bad did the database replica delay get?,3
+hybrid,paraphrase,Why did login errors seem random during the outage?,1
+hybrid,direct,Where will session reads be served from?,2
+hybrid,exact,Which PgBouncer version are we upgrading to?,1
+hybrid,direct,Who writes the customer incident report?,1
+hybrid,direct,Which candidate gets the backend engineer offer?,1
+hybrid,paraphrase,Why was Rahul preferred over Meera?,3
+hybrid,paraphrase,Why are data analyst candidates dropping out?,3
+hybrid,direct,How long will the new analyst take-home be?,5
+hybrid,exact,How many applications did the design intern role get?,1
+hybrid,exact,What is the new referral bonus amount?,2
+hybrid,paraphrase,What is the most requested feature from customers?,2
+hybrid,direct,How long would full offline editing take to build?,1
+hybrid,paraphrase,Why must the notification service be upgraded?,2
+hybrid,paraphrase,Why did we refuse Brightline's partner API request?,7
+hybrid,direct,What counts as success for offline mode?,1
+hybrid_rerank,paraphrase,How much did marketing spending increase by?,1
+hybrid_rerank,direct,What happened to the travel allowance?,2
+hybrid_rerank,paraphrase,Why has our cloud bill gone up?,5
+hybrid_rerank,exact,What was the AWS bill in June?,1
+hybrid_rerank,paraphrase,Who is building the scheduler to turn off staging overnight?,1
+hybrid_rerank,direct,When is the product launch now?,1
+hybrid_rerank,paraphrase,Why couldn't we ship in July?,1
+hybrid_rerank,direct,Who will tell the sales team about the new launch date?,1
+hybrid_rerank,exact,What is happening with the Brightline vendor contract renewal?,1
+hybrid_rerank,paraphrase,Are we hiring the second SRE now?,2
+hybrid_rerank,paraphrase,How long were users unable to log in?,1
+hybrid_rerank,exact,What is JIRA-482?,1
+hybrid_rerank,paraphrase,Why didn't our alerts catch the expiring certificate?,1
+hybrid_rerank,exact,How many days before expiry will certificate alerts fire?,1
+hybrid_rerank,paraphrase,How will we stop certificates from expiring again?,3
+hybrid_rerank,direct,What access must on-call engineers have before their shift?,1
+hybrid_rerank,paraphrase,How bad did the database replica delay get?,1
+hybrid_rerank,paraphrase,Why did login errors seem random during the outage?,1
+hybrid_rerank,direct,Where will session reads be served from?,3
+hybrid_rerank,exact,Which PgBouncer version are we upgrading to?,1
+hybrid_rerank,direct,Who writes the customer incident report?,1
+hybrid_rerank,direct,Which candidate gets the backend engineer offer?,1
+hybrid_rerank,paraphrase,Why was Rahul preferred over Meera?,3
+hybrid_rerank,paraphrase,Why are data analyst candidates dropping out?,2
+hybrid_rerank,direct,How long will the new analyst take-home be?,5
+hybrid_rerank,exact,How many applications did the design intern role get?,1
+hybrid_rerank,exact,What is the new referral bonus amount?,1
+hybrid_rerank,paraphrase,What is the most requested feature from customers?,1
+hybrid_rerank,direct,How long would full offline editing take to build?,1
+hybrid_rerank,paraphrase,Why must the notification service be upgraded?,2
+hybrid_rerank,paraphrase,Why did we refuse Brightline's partner API request?,5
+hybrid_rerank,direct,What counts as success for offline mode?,1

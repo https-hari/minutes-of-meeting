@@ -9,3 +9,8 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
+.env.*
+!.env.example
+eval/results/*_fake.*
+eval/results/agent_details.json
+.venv/
